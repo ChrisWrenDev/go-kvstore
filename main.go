@@ -2,31 +2,43 @@ package main
 
 import "sync"
 
-type Storer interface {
-	Put(string, []byte) error
-	Get(string )([]byte, error)
-    Update(string, []byte) error
-    Delete(string)([]byte, error)
+type Storer[k comparable, v any] interface {
+	Put(k, v) error
+	Get(k)(v, error)
+    Update(k, v) error
+    Delete(k)(v, error)
 }
 
-type KVStore struct {
+type KVStore[k comparable, v any] struct {
     mu sync.RWMutex
-    data map[string][]byte
+    data map[k]v
 }
 
-func NewKVStore() *KVStore {
-    return &KVStore{
-        data: make(map[string][]byte),
+func (s *KVStore[k, v]) Put(k, v) error {}
+
+func (s *KVStore[k, v]) Get(k) (v, error) {}
+
+func (s *KVStore[k, v]) Update(k, v) error {}
+
+func (s *KVStore[k, v]) Delete(k) (v, error) {}
+
+func NewKVStore[k comparable, v any]() *KVStore[k, v] {
+    return &KVStore[k, v]{
+        data: make(map[k]v),
 
     }
 }
 
-func putData(s Storer) error {
-    return s.Put("Name", []byte("tango terry"))
+func putData(s Storer[string, int]) error {
+    return s.Put("Name", 1)
 }
 
-func main(){
-    kv := NewKVStore()
+type Block struct {}
+type Transaction struct {}
 
-    putData(kv)
+func main(){
+    _ = NewKVStore[string, *Block]()
+    _ = NewKVStore[string, *Transaction]()
+
+    // putData(kv)
 }
