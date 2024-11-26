@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 )
 
@@ -80,38 +81,39 @@ func NewKVStore[k comparable, v any]() *KVStore[k, v] {
 	}
 }
 
-type Server struct {
-	Store Storer[string, string]
+type User struct {
+	ID       int
+	FistName string
+	Age      int
+	Gender   string
 }
 
-func (s *Server) getUserByName(name string) (string, error) {
-	return s.Store.Get(name)
+type Server struct {
+	Storage    Storer[int, *User]
+	ListenAddr string
+}
+
+func NewServer(ListenAddr string) *Server {
+	return &Server{
+		Storage:    NewKVStore[int, *User](),
+		ListenAddr: ListenAddr,
+	}
+}
+
+func (s *Server) handlePut(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Foo"))
+}
+
+func (s *Server) Start() {
+	fmt.Printf("HTTP server is running on post %s", s.ListenAddr)
+
+	http.HandleFunc("/put", s.handlePut)
+
+	log.Fatal(http.ListenAndServe(s.ListenAddr, nil))
 }
 
 func main() {
-	store := NewKVStore[string, string]()
-
-	if err := store.Put("foo", "barr"); err != nil {
-		log.Fatal(err)
-	}
-
-	value, err := store.Get("foo")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(value)
-
-	if err := store.Update("foo", "barr"); err != nil {
-		log.Fatal(err)
-	}
-
-	value, err = store.Get("foo")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(value)
-
-	// putData(store)
+	s := NewServer(":3000")
+	s.Start()
 }
