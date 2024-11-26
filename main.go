@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
+
+	"github.com/labstack/echo/v4"
 )
 
 type Storer[k comparable, v any] interface {
@@ -81,36 +82,47 @@ func NewKVStore[k comparable, v any]() *KVStore[k, v] {
 	}
 }
 
-type User struct {
-	ID       int
-	FistName string
-	Age      int
-	Gender   string
-}
-
 type Server struct {
-	Storage    Storer[int, *User]
+	Storage    Storer[string, string]
 	ListenAddr string
 }
 
 func NewServer(ListenAddr string) *Server {
 	return &Server{
-		Storage:    NewKVStore[int, *User](),
+		Storage:    NewKVStore[string, string](),
 		ListenAddr: ListenAddr,
 	}
 }
 
-func (s *Server) handlePut(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Foo"))
+func (s *Server) handlePut(c echo.Context) error {
+	key := c.Param("key")
+	value := c.Param("value")
+
+	s.Storage.Put(key, value)
+
+	return c.JSON(http.StatusOK, map[string]any{"msg": "ok"})
+}
+
+func (s *Server) handleGet(c echo.Context) error {
+	key := c.Param("key")
+
+	value, err := s.Storage.Get(key)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{"value": value})
 }
 
 func (s *Server) Start() {
 	fmt.Printf("HTTP server is running on post %s", s.ListenAddr)
 
-	http.HandleFunc("/put", s.handlePut)
+	e := echo.New()
 
-	log.Fatal(http.ListenAndServe(s.ListenAddr, nil))
+	e.GET("/put/:key/:value", s.handlePut)
+	e.GET("/get/:key", s.handleGet)
+
+	e.Start(s.ListenAddr)
 }
 
 func main() {
